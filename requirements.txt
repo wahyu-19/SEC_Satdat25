@@ -1,9 +1,9 @@
-streamlit
-pandas
-numpy
-matplotlib
-seaborn
-missingno
+streamlit==1.38.0
+pandas==2.2.2
+numpy==1.26.4
+matplotlib==3.9.2
+seaborn==0.13.2
+missingno==0.5.2
 scikit-learn==1.3.2
 tensorflow-cpu==2.15.0
-openpyxl
+openpyxl==3.1.5
