@@ -80,3 +80,4 @@ st.markdown(
     "<h3 style='text-align:center;'>Rekomendasi subsidi bibit yang dapat diberikan : 12 ton</h3>",
     unsafe_allow_html=True
 )
+
