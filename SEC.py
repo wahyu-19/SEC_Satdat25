@@ -36,10 +36,22 @@ def proses_peramalan(uploaded_file):
     dataset_scaled = scaler.fit_transform(dataset)
 
     look_back = 30
+
+    # 🚨 Cek kalau data terlalu pendek
+    if len(dataset) <= look_back:
+        st.warning(f"Dataset terlalu pendek (hanya {len(dataset)} data). "
+                   f"Dibutuhkan minimal {look_back+1} data poin untuk LSTM. "
+                   f"Maka dipakai nilai rata-rata sebagai prediksi.")
+        avg_value = np.mean(dataset)
+        start_date = datetime.date(2025, 1, 1)
+        dates = [start_date + datetime.timedelta(days=i) for i in range(365)]
+        df_forecast = pd.DataFrame({"Tanggal": dates, "Curah Hujan": [avg_value]*365})
+        return df, df_forecast
+
+    # Kalau cukup panjang → lanjut LSTM
     trainX, trainY = create_dataset(dataset_scaled, look_back)
     trainX = np.reshape(trainX, (trainX.shape[0], trainX.shape[1], 1))
 
-    # Build model
     model = Sequential()
     model.add(LSTM(50, input_shape=(look_back, 1)))
     model.add(Dense(1))
@@ -53,11 +65,10 @@ def proses_peramalan(uploaded_file):
 
     for _ in range(365):
         next_pred = model.predict(current_input, verbose=0)
-        predictions.append(next_pred[0][0])   # <-- tambahin ke list
+        predictions.append(next_pred[0][0])
         next_pred = np.reshape(next_pred, (1, 1, 1))
         current_input = np.append(current_input[:, 1:, :], next_pred, axis=1)
 
-    # Inverse transform ke skala asli
     forecast = scaler.inverse_transform(np.array(predictions).reshape(-1, 1))
 
     start_date = datetime.date(2025, 1, 1)
@@ -107,8 +118,12 @@ with col2:
 if uploaded_file is not None:
     df, df_forecast = proses_peramalan(uploaded_file)
 
+    # Kalau forecast kosong → skip
+    if df_forecast.empty:
+        st.stop()
+
     # Hitung rata-rata bulanan
-    df_forecast['Bulan'] = pd.to_datetime(df_forecast['Tanggal']).dt.month
+    df_forecast['Bulan'] = df_forecast['Tanggal'].dt.month
     monthly_avg = df_forecast.groupby('Bulan')['Curah Hujan'].mean()
 
     st.success(f"Rekomendasi subsidi bibit: {luas_lahan*5.5:.1f} ton 🌱")
