@@ -37,6 +37,9 @@ def proses_peramalan(file):
     scaler = MinMaxScaler(feature_range=(0, 1))
     df_proc['RR_norm'] = scaler.fit_transform(df_proc[['RR']])
 
+    # ==================================================
+    # Buat dataset untuk LSTM
+    # ==================================================
     def create_dataset(dataset, look_back=1):
         dataX, dataY = [], []
         for i in range(len(dataset) - look_back - 1):
@@ -115,7 +118,7 @@ with col2:
 if uploaded_file is not None:
     df_proc, df_forecast = proses_peramalan(uploaded_file)
 
-    # Update warna kotak bulan berdasarkan hasil forecast
+    # Update warna kotak bulan berdasarkan rata-rata RR hasil forecast
     for i, b in enumerate(bulan_labels):
         month_data = df_forecast[df_forecast["TANGGAL"].dt.month == (i+1)]
         mean_rr = month_data["RR_Prediksi"].mean()
@@ -152,8 +155,10 @@ if uploaded_file is not None:
         rekomendasi = int(luas_lahan * df_forecast["RR_Prediksi"].median() / 100)
         st.markdown(f"<h3 style='text-align:center;'>Rekomendasi subsidi bibit : {rekomendasi} ton 🌱</h3>", unsafe_allow_html=True)
 
+    # Tampilkan tabel forecast
     st.subheader("📈 Hasil Peramalan 365 Hari (2025)")
     st.dataframe(df_forecast)
 
+    # Download CSV
     csv = df_forecast.to_csv(index=False).encode("utf-8")
     st.download_button("💾 Download Hasil Peramalan", csv, "hasil_peramalan.csv", "text/csv")
