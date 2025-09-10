@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import missingno as msno
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
@@ -13,9 +12,9 @@ from tensorflow.keras.layers import LSTM, Dense
 # ============================================
 def proses_peramalan(file):
     try:
-        df = pd.read_excel(file)
+        df = pd.read_csv(file)  # <-- pakai CSV
         if not set(["TANGGAL", "RR"]).issubset(df.columns):
-            st.error("File Excel harus ada kolom 'TANGGAL' dan 'RR'")
+            st.error("File CSV harus ada kolom 'TANGGAL' dan 'RR'")
             st.stop()
     except Exception as e:
         st.error(f"Gagal membaca file: {e}")
@@ -78,8 +77,6 @@ st.markdown("### Kalender Musim Tanam (Basah - Lembab - Kering)")
 # Tombol bulan
 cols = st.columns(12)
 bulan = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"]
-warna = ["primary","primary","primary","success","success","warning","warning","warning","warning","success","primary","primary"]
-
 for i, b in enumerate(bulan):
     with cols[i]:
         st.button(b, key=f"btn_{b}")
@@ -91,7 +88,7 @@ col1, col2 = st.columns([2,1])
 
 with col1:
     st.subheader("Data Curah Hujan")
-    uploaded_file = st.file_uploader("Upload File Excel (.xlsx, .xls)", type=["xlsx","xls"])
+    uploaded_file = st.file_uploader("Upload File CSV", type=["csv"])
 
 with col2:
     st.subheader("Luas Lahan")
@@ -101,15 +98,29 @@ with col2:
 if uploaded_file is not None:
     df, df_forecast = proses_peramalan(uploaded_file)
 
+    # Ambil median prediksi untuk rekomendasi tanam
+    median_pred = df_forecast["RR_Prediksi"].median()
+
+    # Tentukan rekomendasi bulan tanam
+    if median_pred >= 100:
+        hasil_padi = "Cocok untuk tanam Padi 🌾"
+        hasil_palawija = "Kurang cocok untuk Palawija"
+    elif 50 <= median_pred < 100:
+        hasil_padi = "Kurang optimal untuk Padi"
+        hasil_palawija = "Cocok untuk tanam Palawija 🌽"
+    else:
+        hasil_padi = "Tidak disarankan tanam Padi"
+        hasil_palawija = "Tidak disarankan tanam Palawija"
+
     col3, col4 = st.columns(2)
     with col3:
-        st.text_input("Padi", value="Hasil periode tanam - Padi")
+        st.text_input("Padi", value=hasil_padi)
     with col4:
-        st.text_input("Palawija", value="Hasil periode tanam - Palawija")
+        st.text_input("Palawija", value=hasil_palawija)
 
     # Rekomendasi hasil (contoh sederhana: luas_lahan * median prediksi / 100)
     if luas_lahan > 0:
-        rekomendasi = int(luas_lahan * df_forecast["RR_Prediksi"].median() / 100)
+        rekomendasi = int(luas_lahan * median_pred / 100)
         st.markdown(f"<h3 style='text-align:center;'>Rekomendasi subsidi bibit yang dapat diberikan : {rekomendasi} ton 🌾</h3>", unsafe_allow_html=True)
 
     st.subheader("📈 Hasil Peramalan 30 Hari")
