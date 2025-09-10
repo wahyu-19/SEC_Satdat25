@@ -63,7 +63,7 @@ def proses_peramalan(file):
     model.compile(loss='mean_squared_error', optimizer='adam')
 
     with st.spinner("Training model LSTM..."):
-        model.fit(trainX, trainY, epochs=10, batch_size=1, verbose=0)
+        model.fit(trainX, trainY, epochs=50, batch_size=1, verbose=0)
 
     # ==================================================
     # Forecast 365 hari
