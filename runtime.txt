@@ -1,1 +1,10 @@
+# 🌾 Aplikasi Peramalan Curah Hujan (RR) dengan LSTM
+
+Aplikasi ini dibuat menggunakan **Streamlit** untuk meramalkan curah hujan 30 hari ke depan
+berdasarkan data historis dari file Excel.
+
+## 🚀 Cara menjalankan lokal
+```bash
+pip install -r requirements.txt
+streamlit run SIC.py
 python-3.12.0
