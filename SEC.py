@@ -67,7 +67,6 @@ def proses_peramalan(file):
     })
     return df, df_forecast
 
-
 # ============================================
 # Layout UI
 # ============================================
@@ -76,22 +75,10 @@ st.set_page_config(page_title="AgroForecast", layout="wide")
 st.markdown("<h1 style='text-align:center;'>🌱 AGROFORECAST</h1>", unsafe_allow_html=True)
 st.markdown("### Kalender Musim Tanam (Basah - Lembab - Kering)")
 
-# ========== TAMPILKAN BULAN KOTAK-KOTAK DI AWAL ==========
 bulan_labels = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
                 "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
-cols = st.columns(12)
 
-# default: abu-abu
-for i, b in enumerate(bulan_labels):
-    with cols[i]:
-        st.markdown(
-            f"<div style='background-color:#95a5a6; padding:10px; border-radius:8px; text-align:center; color:white;'>{b}</div>",
-            unsafe_allow_html=True
-        )
-
-st.markdown("---")
-
-# Upload data + luas lahan
+# =================== Upload data + luas lahan ===================
 col1, col2 = st.columns([2, 1])
 with col1:
     st.subheader("Data Curah Hujan")
@@ -100,7 +87,17 @@ with col2:
     st.subheader("Luas Lahan")
     luas_lahan = st.number_input("Input luas lahan (Ha)", min_value=0.0, step=0.1)
 
-# Proses peramalan
+# =================== Jika belum ada file: tampilkan default abu-abu ===================
+if uploaded_file is None:
+    cols = st.columns(12)
+    for i, b in enumerate(bulan_labels):
+        with cols[i]:
+            st.markdown(
+                f"<div style='background-color:#95a5a6; padding:10px; border-radius:8px; text-align:center; color:white;'>{b}</div>",
+                unsafe_allow_html=True
+            )
+
+# =================== Jika ada file: proses forecast dan update warna ===================
 if uploaded_file is not None:
     df, df_forecast = proses_peramalan(uploaded_file)
 
@@ -122,21 +119,18 @@ if uploaded_file is not None:
             unsafe_allow_html=True
         )
 
-    # ========== UPDATE BULAN BERDASARKAN FORECAST ==========
-    st.markdown("---")
-    st.subheader("📅 Kalender Bulanan 2025 (Update Forecast)")
-
+    # ========== UPDATE WARNA BULAN BERDASARKAN FORECAST ==========
     cols = st.columns(12)
     for i, b in enumerate(bulan_labels):
         month_data = df_forecast[df_forecast["TANGGAL"].dt.month == (i+1)]
         mean_rr = month_data["RR_Prediksi"].mean()
 
         if mean_rr > 200:
-            color = "#3498db"  # biru
+            color = "#3498db"  # biru (basah)
         elif mean_rr >= 100:
-            color = "#2ecc71"  # hijau
+            color = "#2ecc71"  # hijau (lembab)
         else:
-            color = "#e74c3c"  # merah
+            color = "#e74c3c"  # merah (kering)
 
         with cols[i]:
             st.markdown(
