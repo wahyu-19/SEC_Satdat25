@@ -67,6 +67,7 @@ def proses_peramalan(file):
     })
     return df, df_forecast
 
+
 # ============================================
 # Layout UI
 # ============================================
@@ -75,19 +76,21 @@ st.set_page_config(page_title="AgroForecast", layout="wide")
 st.markdown("<h1 style='text-align:center;'>🌱 AGROFORECAST</h1>", unsafe_allow_html=True)
 st.markdown("### Kalender Musim Tanam (Basah - Lembab - Kering)")
 
-# =================== Kotak-kotak bulan ===================
+# =================== Kotak-kotak bulan (pakai placeholder) ===================
 bulan_labels = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
                 "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
 
-# Buat satu set kolom bulan (default abu-abu)
 cols_bulan = st.columns(12)
+placeholders_bulan = []
 for i, b in enumerate(bulan_labels):
     with cols_bulan[i]:
-        st.markdown(
-            f"<div id='bulan_{i}' style='background-color:#95a5a6; "
+        ph = st.empty()
+        ph.markdown(
+            f"<div style='background-color:#95a5a6; "
             f"padding:10px; border-radius:8px; text-align:center; color:white;'>{b}</div>",
             unsafe_allow_html=True
         )
+        placeholders_bulan.append(ph)
 
 # =================== Upload data + luas lahan ===================
 col1, col2 = st.columns([2, 1])
@@ -132,12 +135,11 @@ if uploaded_file is not None:
         else:
             color = "#e74c3c"  # merah (kering)
 
-        with cols_bulan[i]:
-            st.markdown(
-                f"<div style='background-color:{color}; "
-                f"padding:10px; border-radius:8px; text-align:center; color:white;'>{b}</div>",
-                unsafe_allow_html=True
-            )
+        placeholders_bulan[i].markdown(
+            f"<div style='background-color:{color}; "
+            f"padding:10px; border-radius:8px; text-align:center; color:white;'>{b}</div>",
+            unsafe_allow_html=True
+        )
 
     # ========== TABEL FORECAST ==========
     st.subheader("📈 Hasil Peramalan 365 Hari (2025)")
