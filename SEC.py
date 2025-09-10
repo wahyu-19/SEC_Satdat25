@@ -21,7 +21,7 @@ def proses_peramalan(file):
     df['TANGGAL'] = pd.to_datetime(df['TANGGAL'], errors='coerce')
     df = df.dropna(subset=['TANGGAL']).sort_values("TANGGAL")
 
-        df_nan = df.dropna(subset=['RR'])
+    df_nan = df.dropna(subset=['RR'])
     scaler = MinMaxScaler(feature_range=(0, 1))
     df_nan['RR_norm'] = scaler.fit_transform(df_nan[['RR']])
 
@@ -66,7 +66,6 @@ def proses_peramalan(file):
         "RR_Prediksi": forecast.flatten()
     })
     return df, df_forecast
-
 
 # ============================================
 # Layout UI
@@ -147,4 +146,5 @@ if uploaded_file is not None:
 
     csv = df_forecast.to_csv(index=False).encode("utf-8")
     st.download_button("💾 Download Hasil Peramalan", csv, "hasil_peramalan.csv", "text/csv")
+
 
