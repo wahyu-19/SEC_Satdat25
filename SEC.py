@@ -119,8 +119,7 @@ if uploaded_file is not None:
             unsafe_allow_html=True
         )
 
-    # ========== UPDATE WARNA BULAN BERDASARKAN FORECAST ==========
-    cols = st.columns(12)
+      # ========== UPDATE WARNA BULAN BERDASARKAN FORECAST (ubah yg atas) ==========
     for i, b in enumerate(bulan_labels):
         month_data = df_forecast[df_forecast["TANGGAL"].dt.month == (i+1)]
         mean_rr = month_data["RR_Prediksi"].mean()
@@ -132,7 +131,7 @@ if uploaded_file is not None:
         else:
             color = "#e74c3c"  # merah (kering)
 
-        with cols[i]:
+        with cols[i]:  # ← pakai cols yg sudah dibuat di atas (default abu-abu)
             st.markdown(
                 f"<div style='background-color:{color}; padding:10px; border-radius:8px; text-align:center; color:white;'>{b}</div>",
                 unsafe_allow_html=True
@@ -144,4 +143,5 @@ if uploaded_file is not None:
 
     csv = df_forecast.to_csv(index=False).encode("utf-8")
     st.download_button("💾 Download Hasil Peramalan", csv, "hasil_peramalan.csv", "text/csv")
+
 
