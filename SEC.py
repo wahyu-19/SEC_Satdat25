@@ -67,11 +67,41 @@ def proses_peramalan(file):
     return df, df_forecast
 
 # ============================================
+# ============================================
 # Layout UI
 # ============================================
 st.set_page_config(page_title="AgroForecast", layout="wide")
 
-st.markdown("<h1 style='text-align: center;'>AGROFORECAST</h1>", unsafe_allow_html=True)
+# CSS custom agar responsif
+st.markdown("""
+    <style>
+        /* Atur agar konten ada margin kiri-kanan biar rapi */
+        .block-container {
+            max-width: 1200px;  /* batas maksimal lebar */
+            padding-left: 2rem;
+            padding-right: 2rem;
+            margin: auto;
+        }
+
+        /* Judul tengah */
+        h1 {
+            text-align: center;
+        }
+
+        /* Supaya tabel tidak kepanjangan */
+        .dataframe {
+            font-size: 14px;
+        }
+
+        /* Atur tombol biar responsif */
+        div.stButton > button {
+            width: 100%;
+            border-radius: 10px;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+st.markdown("<h1>AGROFORECAST</h1>", unsafe_allow_html=True)
 st.markdown("### Kalender Musim Tanam (Basah - Lembab - Kering)")
 
 # Tombol bulan
@@ -128,3 +158,4 @@ if uploaded_file is not None:
 
     csv = df_forecast.to_csv(index=False).encode("utf-8")
     st.download_button("💾 Download Hasil Peramalan", csv, "hasil_peramalan.csv", "text/csv")
+
