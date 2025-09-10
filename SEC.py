@@ -73,6 +73,7 @@ def proses_peramalan(file):
 st.set_page_config(page_title="AgroForecast", layout="wide")
 
 st.markdown("<h1 style='text-align:center;'>🌱 AGROFORECAST</h1>", unsafe_allow_html=True)
+st.markdown("### Kalender Musim Tanam (Basah - Lembab - Kering)")
 
 # =================== Kotak-kotak bulan langsung di bawah judul ===================
 bulan_labels = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
@@ -86,8 +87,6 @@ for i, b in enumerate(bulan_labels):
             f"<div style='background-color:#95a5a6; padding:10px; border-radius:8px; text-align:center; color:white;'>{b}</div>",
             unsafe_allow_html=True
         )
-
-st.markdown("### Kalender Musim Tanam (Basah - Lembab - Kering)")
 
 # =================== Upload data + luas lahan ===================
 col1, col2 = st.columns([2, 1])
@@ -145,3 +144,4 @@ if uploaded_file is not None:
 
     csv = df_forecast.to_csv(index=False).encode("utf-8")
     st.download_button("💾 Download Hasil Peramalan", csv, "hasil_peramalan.csv", "text/csv")
+
