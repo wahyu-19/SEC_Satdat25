@@ -34,11 +34,14 @@ def proses_peramalan(file):
     st.subheader("🔍 Cek Missing Values")
     st.write(df.isnull().sum())
 
-    fig1 = msno.bar(df)
+    fig1 = plt.figure()
+    msno.bar(df)
     st.pyplot(fig1)
-
-    fig2 = msno.matrix(df)
+    
+    fig2 = plt.figure()
+    msno.matrix(df)
     st.pyplot(fig2)
+
 
     # Bersihkan data (drop NA di RR)
     df_nan = df.dropna(subset=['RR'])
@@ -129,3 +132,4 @@ if uploaded_file is not None:
 
     csv = df_forecast.to_csv(index=False).encode("utf-8")
     st.download_button("💾 Download Hasil Peramalan", csv, "hasil_peramalan.csv", "text/csv")
+
