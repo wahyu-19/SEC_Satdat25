@@ -63,7 +63,7 @@ def proses_peramalan(file):
     model.compile(loss='mean_squared_error', optimizer='adam')
 
     with st.spinner("Training model LSTM..."):
-        model.fit(trainX, trainY, epochs=50, batch_size=1, verbose=0)
+        model.fit(trainX, trainY, epochs=50, batch_size=32, verbose=0)
 
     # ==================================================
     # Forecast 365 hari
@@ -164,3 +164,4 @@ if uploaded_file is not None:
 
     csv = df_forecast.to_csv(index=False).encode("utf-8")
     st.download_button("💾 Download Hasil Peramalan", csv, "hasil_peramalan.csv", "text/csv")
+
