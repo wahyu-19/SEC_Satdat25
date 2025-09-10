@@ -1,3 +1,14 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense
+
+# ============================================
+# Fungsi peramalan
+# ============================================
 def proses_peramalan(file):
     try:
         df = pd.read_csv(file)
@@ -14,6 +25,9 @@ def proses_peramalan(file):
     # ==================================================
     # PREPROCESSING DATA
     # ==================================================
+    # Simpan distribusi awal
+    rr_awal = df['RR'].copy()
+
     # Ganti kode error (8888, 9999, "-") jadi NaN
     df['RR'] = df['RR'].replace([8888, 9999, "-"], np.nan)
 
@@ -21,11 +35,11 @@ def proses_peramalan(file):
     df['RR'] = pd.to_numeric(df['RR'], errors='coerce')
 
     # Hitung jumlah error code
-    count_8888 = (df == 8888).sum()
-    count_9999 = (df == 9999).sum()
+    count_8888 = (rr_awal == 8888).sum()
+    count_9999 = (rr_awal == 9999).sum()
 
-    st.write("Jumlah 8888 per kolom:\n", count_8888)
-    st.write("Jumlah 9999 per kolom:\n", count_9999)
+    st.write("Jumlah nilai 8888:", count_8888)
+    st.write("Jumlah nilai 9999:", count_9999)
 
     # Ambil median dari nilai valid
     rr_median = df['RR'].median()
@@ -36,6 +50,14 @@ def proses_peramalan(file):
     st.write("Median RR:", rr_median)
     st.write("Min RR setelah imputasi:", df['RR'].min())
     st.write("Max RR setelah imputasi:", df['RR'].max())
+
+    # Plot sebelum & sesudah preprocessing
+    fig, ax = plt.subplots(1, 2, figsize=(12, 4))
+    ax[0].hist(rr_awal.replace([8888, 9999, "-"], np.nan).dropna(), bins=30, color="gray")
+    ax[0].set_title("Distribusi RR (Sebelum Preprocessing)")
+    ax[1].hist(df['RR'], bins=30, color="green")
+    ax[1].set_title("Distribusi RR (Sesudah Preprocessing)")
+    st.pyplot(fig)
 
     # ==================================================
     # Normalisasi untuk training
@@ -81,3 +103,84 @@ def proses_peramalan(file):
     future_dates = pd.date_range(start="2025-01-01", periods=365)
     df_forecast = pd.DataFrame({"TANGGAL": future_dates, "RR_Prediksi": forecast.flatten()})
     return df, df_forecast
+
+
+# ============================================
+# Layout UI
+# ============================================
+st.set_page_config(page_title="AgroForecast", layout="wide")
+
+st.markdown("<h1 style='text-align: center;'>🌱 AGROFORECAST</h1>", unsafe_allow_html=True)
+st.markdown("### Kalender Musim Tanam (Basah - Lembab - Kering)")
+
+# Kotak bulan default abu-abu
+bulan_labels = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+                "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
+
+cols_bulan = st.columns(12)
+for i, b in enumerate(bulan_labels):
+    with cols_bulan[i]:
+        st.markdown(
+            f"<div style='background-color:#7f8c8d; padding:10px; border-radius:8px; text-align:center; color:white;'>{b}</div>",
+            unsafe_allow_html=True
+        )
+
+st.markdown("---")
+
+# Dua kolom: Upload + Input Luas Lahan
+col1, col2 = st.columns([2, 1])
+
+with col1:
+    st.subheader("Data Curah Hujan")
+    uploaded_file = st.file_uploader("Upload File CSV (.csv)", type=["csv"])
+
+with col2:
+    st.subheader("Luas Lahan")
+    luas_lahan = st.number_input("Input luas lahan (Ha)", min_value=0.0, step=0.1)
+
+# Proses peramalan
+if uploaded_file is not None:
+    df, df_forecast = proses_peramalan(uploaded_file)
+
+    # Update warna kotak bulan berdasarkan hasil forecast
+    for i, b in enumerate(bulan_labels):
+        month_data = df_forecast[df_forecast["TANGGAL"].dt.month == (i+1)]
+        mean_rr = month_data["RR_Prediksi"].mean()
+
+        if mean_rr > 200:
+            color = "#3498db"  # biru (basah)
+        elif mean_rr >= 100:
+            color = "#2ecc71"  # hijau (lembab)
+        else:
+            color = "#e74c3c"  # merah (kering)
+
+        with cols_bulan[i]:
+            st.markdown(
+                f"<div style='background-color:{color}; padding:10px; border-radius:8px; text-align:center; color:white;'>{b}</div>",
+                unsafe_allow_html=True
+            )
+
+    # Rekomendasi tanaman
+    col3, col4 = st.columns(2)
+    with col3:
+        if df_forecast["RR_Prediksi"].mean() > 150:
+            st.success("Cocok untuk tanam Padi 🌾")
+        else:
+            st.error("Tidak disarankan tanam Padi")
+
+    with col4:
+        if 100 <= df_forecast["RR_Prediksi"].mean() <= 200:
+            st.success("Cocok untuk tanam Palawija 🌽")
+        else:
+            st.error("Tidak disarankan tanam Palawija")
+
+    # Rekomendasi subsidi bibit
+    if luas_lahan > 0:
+        rekomendasi = int(luas_lahan * df_forecast["RR_Prediksi"].median() / 100)
+        st.markdown(f"<h3 style='text-align:center;'>Rekomendasi subsidi bibit : {rekomendasi} ton 🌱</h3>", unsafe_allow_html=True)
+
+    st.subheader("📈 Hasil Peramalan 365 Hari (2025)")
+    st.dataframe(df_forecast)
+
+    csv = df_forecast.to_csv(index=False).encode("utf-8")
+    st.download_button("💾 Download Hasil Peramalan", csv, "hasil_peramalan.csv", "text/csv")
