@@ -31,6 +31,9 @@ def proses_peramalan(file):
     rr_median = df_proc['RR'].median()
     df_proc['RR'] = df_proc['RR'].fillna(rr_median)
 
+    # Log-transform agar prediksi lebih stabil
+    df_proc['RR_log'] = np.log1p(df_proc['RR'])
+    
     # ==================================================
     # NORMALISASI
     # ==================================================
@@ -162,3 +165,4 @@ if uploaded_file is not None:
     # Download CSV
     csv = df_forecast.to_csv(index=False).encode("utf-8")
     st.download_button("💾 Download Hasil Peramalan", csv, "hasil_peramalan.csv", "text/csv")
+
