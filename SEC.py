@@ -68,48 +68,57 @@ def proses_peramalan(file):
 
 # ============================================
 # ============================================
+# ============================================
 # Layout UI
 # ============================================
 st.set_page_config(page_title="AgroForecast", layout="wide")
 
-# CSS custom agar responsif
+# CSS custom
 st.markdown("""
     <style>
-        /* Atur agar konten ada margin kiri-kanan biar rapi */
         .block-container {
-            max-width: 1200px;  /* batas maksimal lebar */
+            max-width: 1200px;
             padding-left: 2rem;
             padding-right: 2rem;
             margin: auto;
         }
+        h1 { text-align: center; }
 
-        /* Judul tengah */
-        h1 {
-            text-align: center;
+        /* Badge bulan */
+        .month-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            margin: 4px;
+            border-radius: 8px;
+            font-weight: bold;
+            color: white;
         }
-
-        /* Supaya tabel tidak kepanjangan */
-        .dataframe {
-            font-size: 14px;
-        }
-
-        /* Atur tombol biar responsif */
-        div.stButton > button {
-            width: 100%;
-            border-radius: 10px;
-        }
+        .blue { background-color: #3498db; }
+        .green { background-color: #2ecc71; }
+        .yellow { background-color: #f1c40f; color: black; }
     </style>
 """, unsafe_allow_html=True)
 
 st.markdown("<h1>AGROFORECAST</h1>", unsafe_allow_html=True)
 st.markdown("### Kalender Musim Tanam (Basah - Lembab - Kering)")
 
-# Tombol bulan
-cols = st.columns(12)
-bulan = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"]
-for i, b in enumerate(bulan):
-    with cols[i]:
-        st.button(b, key=f"btn_{b}")
+# Tombol bulan pakai badge warna
+st.markdown("""
+<div>
+    <span class="month-badge blue">Januari</span>
+    <span class="month-badge blue">Februari</span>
+    <span class="month-badge blue">Maret</span>
+    <span class="month-badge green">April</span>
+    <span class="month-badge green">Mei</span>
+    <span class="month-badge yellow">Juni</span>
+    <span class="month-badge yellow">Juli</span>
+    <span class="month-badge yellow">Agustus</span>
+    <span class="month-badge yellow">September</span>
+    <span class="month-badge green">Oktober</span>
+    <span class="month-badge blue">November</span>
+    <span class="month-badge blue">Desember</span>
+</div>
+""", unsafe_allow_html=True)
 
 st.markdown("---")
 
@@ -158,4 +167,5 @@ if uploaded_file is not None:
 
     csv = df_forecast.to_csv(index=False).encode("utf-8")
     st.download_button("💾 Download Hasil Peramalan", csv, "hasil_peramalan.csv", "text/csv")
+
 
