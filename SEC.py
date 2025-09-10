@@ -39,6 +39,7 @@ def proses_peramalan(uploaded_file):
     trainX, trainY = create_dataset(dataset_scaled, look_back)
     trainX = np.reshape(trainX, (trainX.shape[0], trainX.shape[1], 1))
 
+    # Build model
     model = Sequential()
     model.add(LSTM(50, input_shape=(look_back, 1)))
     model.add(Dense(1))
@@ -52,9 +53,11 @@ def proses_peramalan(uploaded_file):
 
     for _ in range(365):
         next_pred = model.predict(current_input, verbose=0)
+        predictions.append(next_pred[0][0])   # <-- tambahin ke list
         next_pred = np.reshape(next_pred, (1, 1, 1))
         current_input = np.append(current_input[:, 1:, :], next_pred, axis=1)
 
+    # Inverse transform ke skala asli
     forecast = scaler.inverse_transform(np.array(predictions).reshape(-1, 1))
 
     start_date = datetime.date(2025, 1, 1)
@@ -105,7 +108,7 @@ if uploaded_file is not None:
     df, df_forecast = proses_peramalan(uploaded_file)
 
     # Hitung rata-rata bulanan
-    df_forecast['Bulan'] = df_forecast['Tanggal'].dt.month
+    df_forecast['Bulan'] = pd.to_datetime(df_forecast['Tanggal']).dt.month
     monthly_avg = df_forecast.groupby('Bulan')['Curah Hujan'].mean()
 
     st.success(f"Rekomendasi subsidi bibit: {luas_lahan*5.5:.1f} ton 🌱")
@@ -125,4 +128,3 @@ if uploaded_file is not None:
                 f"<div style='padding:10px; border-radius:8px; text-align:center; background-color:gray; color:white'>{b}</div>",
                 unsafe_allow_html=True
             )
-
