@@ -52,8 +52,8 @@ def proses_peramalan(uploaded_file):
 
     for _ in range(365):
         next_pred = model.predict(current_input, verbose=0)
-        predictions.append(next_pred[0, 0])
-        current_input = np.append(current_input[:, 1:, :], [[next_pred]], axis=1)
+        next_pred = np.reshape(next_pred, (1, 1, 1))
+        current_input = np.append(current_input[:, 1:, :], next_pred, axis=1)
 
     forecast = scaler.inverse_transform(np.array(predictions).reshape(-1, 1))
 
@@ -125,3 +125,4 @@ if uploaded_file is not None:
                 f"<div style='padding:10px; border-radius:8px; text-align:center; background-color:gray; color:white'>{b}</div>",
                 unsafe_allow_html=True
             )
+
