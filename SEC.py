@@ -58,11 +58,7 @@ def proses_peramalan(file):
     forecast = scaler.inverse_transform(np.array(forecast).reshape(-1, 1))
 
     # ====== SET MULAI TANGGAL 2025 ======
-    last_date = df_nan['TANGGAL'].iloc[-1]
     start_date = pd.Timestamp(year=2025, month=1, day=1)
-    if last_date.year >= 2025:
-        start_date = last_date + pd.Timedelta(days=1)
-
     future_dates = pd.date_range(start=start_date, periods=365)
 
     df_forecast = pd.DataFrame({
@@ -80,6 +76,21 @@ st.set_page_config(page_title="AgroForecast", layout="wide")
 st.markdown("<h1 style='text-align:center;'>🌱 AGROFORECAST</h1>", unsafe_allow_html=True)
 st.markdown("### Kalender Musim Tanam (Basah - Lembab - Kering)")
 
+# ========== TAMPILKAN BULAN KOTAK-KOTAK DI AWAL ==========
+bulan_labels = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+                "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
+cols = st.columns(12)
+
+# default: abu-abu
+for i, b in enumerate(bulan_labels):
+    with cols[i]:
+        st.markdown(
+            f"<div style='background-color:#95a5a6; padding:10px; border-radius:8px; text-align:center; color:white;'>{b}</div>",
+            unsafe_allow_html=True
+        )
+
+st.markdown("---")
+
 # Upload data + luas lahan
 col1, col2 = st.columns([2, 1])
 with col1:
@@ -95,15 +106,8 @@ if uploaded_file is not None:
 
     # ========== HASIL REKOMENDASI ==========
     median_pred = df_forecast["RR_Prediksi"].median()
-    if median_pred >= 100:
-        hasil_padi = "✅ Cocok untuk tanam Padi 🌾"
-    else:
-        hasil_padi = "❌ Tidak disarankan tanam Padi"
-
-    if 50 <= median_pred < 200:
-        hasil_palawija = "✅ Cocok untuk tanam Palawija 🌽"
-    else:
-        hasil_palawija = "❌ Tidak disarankan tanam Palawija"
+    hasil_padi = "✅ Cocok untuk tanam Padi 🌾" if median_pred >= 100 else "❌ Tidak disarankan tanam Padi"
+    hasil_palawija = "✅ Cocok untuk tanam Palawija 🌽" if 50 <= median_pred < 200 else "❌ Tidak disarankan tanam Palawija"
 
     col3, col4 = st.columns(2)
     with col3:
@@ -111,7 +115,6 @@ if uploaded_file is not None:
     with col4:
         st.info(hasil_palawija)
 
-    # ========== REKOMENDASI SUBSIDI ==========
     if luas_lahan > 0:
         rekomendasi = int(luas_lahan * median_pred / 100)
         st.markdown(
@@ -119,13 +122,11 @@ if uploaded_file is not None:
             unsafe_allow_html=True
         )
 
-    # ========== TAMPILKAN BULAN DENGAN WARNA ==========
+    # ========== UPDATE BULAN BERDASARKAN FORECAST ==========
     st.markdown("---")
-    st.subheader("📅 Kalender Bulanan 2025")
+    st.subheader("📅 Kalender Bulanan 2025 (Update Forecast)")
 
-    bulan_labels = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
     cols = st.columns(12)
-
     for i, b in enumerate(bulan_labels):
         month_data = df_forecast[df_forecast["TANGGAL"].dt.month == (i+1)]
         mean_rr = month_data["RR_Prediksi"].mean()
