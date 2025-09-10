@@ -34,7 +34,7 @@ def proses_peramalan(file):
         return np.array(dataX), np.array(dataY)
 
     dataset = df_nan['RR_norm'].values.reshape(-1, 1)
-    look_back = 30  # <<<<<<<<<<<<<< diganti 30
+    look_back = 30
     trainX, trainY = create_dataset(dataset, look_back)
     trainX = np.reshape(trainX, (trainX.shape[0], trainX.shape[1], 1))
 
@@ -75,16 +75,17 @@ st.set_page_config(page_title="AgroForecast", layout="wide")
 st.markdown("<h1 style='text-align:center;'>🌱 AGROFORECAST</h1>", unsafe_allow_html=True)
 st.markdown("### Kalender Musim Tanam (Basah - Lembab - Kering)")
 
-# =================== Kotak-kotak bulan langsung di bawah judul ===================
+# =================== Kotak-kotak bulan ===================
 bulan_labels = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
                 "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
 
-# Default abu-abu sebelum upload
-cols = st.columns(12)
+# Buat satu set kolom bulan (default abu-abu)
+cols_bulan = st.columns(12)
 for i, b in enumerate(bulan_labels):
-    with cols[i]:
+    with cols_bulan[i]:
         st.markdown(
-            f"<div style='background-color:#95a5a6; padding:10px; border-radius:8px; text-align:center; color:white;'>{b}</div>",
+            f"<div id='bulan_{i}' style='background-color:#95a5a6; "
+            f"padding:10px; border-radius:8px; text-align:center; color:white;'>{b}</div>",
             unsafe_allow_html=True
         )
 
@@ -120,7 +121,6 @@ if uploaded_file is not None:
         )
 
     # ========== UPDATE WARNA BULAN BERDASARKAN FORECAST ==========
-    cols = st.columns(12)
     for i, b in enumerate(bulan_labels):
         month_data = df_forecast[df_forecast["TANGGAL"].dt.month == (i+1)]
         mean_rr = month_data["RR_Prediksi"].mean()
@@ -132,9 +132,10 @@ if uploaded_file is not None:
         else:
             color = "#e74c3c"  # merah (kering)
 
-        with cols[i]:
+        with cols_bulan[i]:
             st.markdown(
-                f"<div style='background-color:{color}; padding:10px; border-radius:8px; text-align:center; color:white;'>{b}</div>",
+                f"<div style='background-color:{color}; "
+                f"padding:10px; border-radius:8px; text-align:center; color:white;'>{b}</div>",
                 unsafe_allow_html=True
             )
 
@@ -144,4 +145,3 @@ if uploaded_file is not None:
 
     csv = df_forecast.to_csv(index=False).encode("utf-8")
     st.download_button("💾 Download Hasil Peramalan", csv, "hasil_peramalan.csv", "text/csv")
-
