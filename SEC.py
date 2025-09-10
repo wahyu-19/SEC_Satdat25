@@ -6,7 +6,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
 
 # ============================================
-# Fungsi peramalan
+# Fungsi peramalan dengan preprocessing
 # ============================================
 def proses_peramalan(file):
     try:
@@ -21,9 +21,35 @@ def proses_peramalan(file):
     df['TANGGAL'] = pd.to_datetime(df['TANGGAL'], errors='coerce')
     df = df.dropna(subset=['TANGGAL']).sort_values("TANGGAL")
 
-    # Bersihkan data
-    df_nan = df.dropna(subset=['RR'])
-    rr_clean = df_nan['RR']
+    # ==============================
+    # Preprocessing Missing Value
+    # ==============================
+    count_8888 = (df == 8888).sum()
+    count_9999 = (df == 9999).sum()
+
+    st.write("Jumlah 8888 per kolom:\n", count_8888)
+    st.write("Jumlah 9999 per kolom:\n", count_9999)
+
+    df_nan = df.replace([8888, 9999], np.nan)
+
+    # ganti 8888, 9999, "-" jadi NaN di kolom RR
+    df_nan['RR'] = df_nan['RR'].replace([8888, 9999, "-"], np.nan)
+
+    # pastikan tipe numerik
+    df_nan['RR'] = pd.to_numeric(df_nan['RR'], errors='coerce')
+
+    # drop NaN hanya untuk menghitung median
+    rr_clean = df_nan['RR'].dropna()
+
+    # ambil median RR valid
+    rr_median = df_nan['RR'].median()
+
+    # isi NaN dengan median
+    df_nan['RR'] = df_nan['RR'].fillna(rr_median)
+
+    st.write("Median RR:", rr_median)
+    st.write("Min RR setelah imputasi:", df_nan['RR'].min())
+    st.write("Max RR setelah imputasi:", df_nan['RR'].max())
 
     # Normalisasi
     scaler = MinMaxScaler(feature_range=(0, 1))
