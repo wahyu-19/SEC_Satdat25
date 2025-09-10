@@ -34,7 +34,7 @@ def proses_peramalan(file):
         return np.array(dataX), np.array(dataY)
 
     dataset = df_nan['RR_norm'].values.reshape(-1, 1)
-    look_back = 14
+    look_back = 30  # <<<<<<<<<<<<<< diganti 30
     trainX, trainY = create_dataset(dataset, look_back)
     trainX = np.reshape(trainX, (trainX.shape[0], trainX.shape[1], 1))
 
@@ -73,10 +73,21 @@ def proses_peramalan(file):
 st.set_page_config(page_title="AgroForecast", layout="wide")
 
 st.markdown("<h1 style='text-align:center;'>🌱 AGROFORECAST</h1>", unsafe_allow_html=True)
-st.markdown("### Kalender Musim Tanam (Basah - Lembab - Kering)")
 
+# =================== Kotak-kotak bulan langsung di bawah judul ===================
 bulan_labels = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
                 "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
+
+# Default abu-abu sebelum upload
+cols = st.columns(12)
+for i, b in enumerate(bulan_labels):
+    with cols[i]:
+        st.markdown(
+            f"<div style='background-color:#95a5a6; padding:10px; border-radius:8px; text-align:center; color:white;'>{b}</div>",
+            unsafe_allow_html=True
+        )
+
+st.markdown("### Kalender Musim Tanam (Basah - Lembab - Kering)")
 
 # =================== Upload data + luas lahan ===================
 col1, col2 = st.columns([2, 1])
@@ -86,16 +97,6 @@ with col1:
 with col2:
     st.subheader("Luas Lahan")
     luas_lahan = st.number_input("Input luas lahan (Ha)", min_value=0.0, step=0.1)
-
-# =================== Jika belum ada file: tampilkan default abu-abu ===================
-if uploaded_file is None:
-    cols = st.columns(12)
-    for i, b in enumerate(bulan_labels):
-        with cols[i]:
-            st.markdown(
-                f"<div style='background-color:#95a5a6; padding:10px; border-radius:8px; text-align:center; color:white;'>{b}</div>",
-                unsafe_allow_html=True
-            )
 
 # =================== Jika ada file: proses forecast dan update warna ===================
 if uploaded_file is not None:
