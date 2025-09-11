@@ -90,7 +90,7 @@ def proses_peramalan(file):
         7: "Jul", 8: "Agu", 9: "Sep", 10: "Okt", 11: "Nov", 12: "Des"
     })
 
-    return df, df_forecast, df_bulanan
+    return df_bulanan
 
 # ============================================
 # Layout UI
@@ -127,12 +127,12 @@ with col2:
 
 # =================== Jika ada file ===================
 if uploaded_file is not None:
-    df, df_forecast, df_bulanan = proses_peramalan(uploaded_file)
+    df_bulanan = proses_peramalan(uploaded_file)
 
     # ========== HASIL REKOMENDASI ==========
-    median_pred = df_forecast["RR_Prediksi"].median()
-    hasil_padi = "✅ Cocok untuk tanam Padi 🌾" if median_pred >= 100 else "❌ Tidak disarankan tanam Padi"
-    hasil_palawija = "✅ Cocok untuk tanam Palawija 🌽" if 50 <= median_pred < 200 else "❌ Tidak disarankan tanam Palawija"
+    median_pred = df_bulanan["RR_Prediksi"].median()
+    hasil_padi = "✅ Cocok untuk tanam Padi 🌾" if median_pred >= 300 else "❌ Tidak disarankan tanam Padi"
+    hasil_palawija = "✅ Cocok untuk tanam Palawija 🌽" if 150 <= median_pred < 300 else "❌ Tidak disarankan tanam Palawija"
 
     col3, col4 = st.columns(2)
     with col3:
@@ -155,9 +155,9 @@ if uploaded_file is not None:
         else:
             total_rr = 0
 
-        if total_rr > 200:   # total bulanan > 200 mm
+        if total_rr > 300:   # total bulanan > 300 mm = basah
             color = "#3498db"  # biru (basah)
-        elif total_rr >= 100:
+        elif total_rr >= 150:
             color = "#2ecc71"  # hijau (lembab)
         else:
             color = "#e74c3c"  # merah (kering)
@@ -168,26 +168,10 @@ if uploaded_file is not None:
             unsafe_allow_html=True
         )
 
-    # ========== TABEL FORECAST ==========
-    st.subheader("📈 Hasil Peramalan 365 Hari (2025)")
-    st.dataframe(df_forecast)
-
     # ========== TABEL BULANAN ==========
     st.subheader("📊 Akumulasi Curah Hujan Bulanan (2025)")
     st.dataframe(df_bulanan)
 
-    # ========== GRAFIK BATANG BULANAN ==========
-    st.subheader("📊 Grafik Total Curah Hujan Bulanan")
-    fig, ax = plt.subplots()
-    ax.bar(df_bulanan['Nama_Bulan'], df_bulanan['RR_Prediksi'])
-    ax.set_ylabel("Total Curah Hujan (mm)")
-    ax.set_xlabel("Bulan")
-    ax.set_title("Total Curah Hujan Bulanan (2025)")
-    st.pyplot(fig)
-
     # ========== DOWNLOAD ==========
-    csv = df_forecast.to_csv(index=False).encode("utf-8")
-    st.download_button("💾 Download Hasil Peramalan Harian", csv, "hasil_peramalan.csv", "text/csv")
-
     csv_bulanan = df_bulanan.to_csv(index=False).encode("utf-8")
     st.download_button("💾 Download Hasil Peramalan Bulanan", csv_bulanan, "hasil_peramalan_bulanan.csv", "text/csv")
