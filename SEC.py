@@ -23,25 +23,13 @@ def proses_peramalan(file):
     df = df.dropna(subset=['TANGGAL']).sort_values("TANGGAL")
 
     # ======== Preprocessing RR ========
-    df_nan = df.copy()
-    # ganti 8888, 9999, "-" jadi NaN
-    df_nan['RR'] = df_nan['RR'].replace([8888, 9999, "-"], np.nan)
-    # pastikan numerik
-    df_nan['RR'] = pd.to_numeric(df_nan['RR'], errors='coerce')
-    # ambil median valid
-    rr_median = df_nan['RR'].median()
-    # isi NaN dengan median
-    df_nan['RR'] = df_nan['RR'].fillna(rr_median)
-
-    # Info preprocessing
-    st.write("📊 Info Preprocessing Data")
-    st.write(f"Median RR: {rr_median}")
-    st.write(f"Min RR setelah imputasi: {df_nan['RR'].min()}")
-    st.write(f"Max RR setelah imputasi: {df_nan['RR'].max()}")
+    df['RR'] = df['RR'].replace([8888, 9999, "-"], np.nan)
+    df['RR'] = pd.to_numeric(df['RR'], errors='coerce')
+    df['RR'] = df['RR'].fillna(df['RR'].median())
 
     # ======== Normalisasi untuk LSTM ========
     scaler = MinMaxScaler(feature_range=(0, 1))
-    df_nan['RR_norm'] = scaler.fit_transform(df_nan[['RR']])
+    df['RR_norm'] = scaler.fit_transform(df[['RR']])
 
     # ======== Dataset untuk LSTM ========
     def create_dataset(dataset, look_back=1):
@@ -52,7 +40,7 @@ def proses_peramalan(file):
             dataY.append(dataset[i + look_back, 0])
         return np.array(dataX), np.array(dataY)
 
-    dataset = df_nan['RR_norm'].values.reshape(-1, 1)
+    dataset = df['RR_norm'].values.reshape(-1, 1)
     look_back = 30
     trainX, trainY = create_dataset(dataset, look_back)
     trainX = np.reshape(trainX, (trainX.shape[0], trainX.shape[1], 1))
@@ -166,3 +154,4 @@ if uploaded_file is not None:
 
     csv = df_forecast.to_csv(index=False).encode("utf-8")
     st.download_button("💾 Download Hasil Peramalan", csv, "hasil_peramalan.csv", "text/csv")
+
