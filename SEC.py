@@ -155,24 +155,23 @@ if uploaded_file is not None:
 
     # ========== UPDATE WARNA BULAN ==========
     for i, b in enumerate(bulan_labels):
-        month_data = df_bulanan[df_bulanan["Bulan"].str.startswith(b)]
-        if not month_data.empty:
-            total_rr = month_data["Prediksi Curah Hujan"].values[0]
-        else:
-            total_rr = 0
+    month_data = df_bulanan[(df_bulanan["Tahun"] == 2025) & (df_bulanan["Bulan_Angka"] == (i + 1))]
+    if not month_data.empty:
+        total_rr = month_data["Prediksi Curah Hujan"].values[0]
+    else:
+        total_rr = 0
 
-        if total_rr > 200:   # total bulanan > 300 mm = basah
-            color = "#3498db"  # biru (basah)
-        elif total_rr >= 100:
-            color = "#2ecc71"  # hijau (lembab)
-        else:
-            color = "#f39c12"  # orange (kering)
+    if total_rr > 200:
+        color = "#3498db"  # biru (basah)
+    elif total_rr >= 100:
+        color = "#2ecc71"  # hijau (lembab)
+    else:
+        color = "#f39c12"  # orange (kering)
 
-        placeholders_bulan[i].markdown(
-            f"<div style='background-color:{color}; "
-            f"padding:10px; border-radius:8px; text-align:center; color:white;'>{b}</div>",
-            unsafe_allow_html=True
-        )
+    placeholders_bulan[i].markdown(
+        f"<div style='background-color:{color}; padding:10px; border-radius:8px; text-align:center; color:white;'>{b}</div>",
+        unsafe_allow_html=True
+    )
 
     # ========== TABEL FORECAST BULANAN ==========
     st.subheader("📊 Hasil Peramalan Bulanan")
@@ -191,4 +190,5 @@ if uploaded_file is not None:
         "hasil_peramalan_bulanan.csv",
         "text/csv"
     )
+
 
