@@ -174,13 +174,30 @@ if uploaded_file is not None:
             unsafe_allow_html=True
         )
 
-    # ========== TABEL BULANAN ==========
-    st.subheader("📊 Akumulasi Curah Hujan Bulanan (2025)")
+    # ========== TABEL FORECAST BULANAN ==========
+    st.subheader("📊 Hasil Peramalan Bulanan")
+    
+    # Pastikan Tahun int
+    df_bulanan['Tahun'] = df_bulanan['Tahun'].astype(int)
+    
+    # Ganti angka bulan jadi nama bulan
+    df_bulanan['Bulan'] = pd.to_datetime(df_bulanan['Bulan'], format='%m').dt.month_name()
+    
+    # Atur urutan kolom: Tahun, Bulan, Prediksi
+    df_bulanan = df_bulanan[['Tahun', 'Bulan', 'Forecast Curah hujan']]
+    
+    # Tampilkan tabel
     st.dataframe(df_bulanan)
-
-    # ========== DOWNLOAD ==========
+    
+    # Tombol download
     csv_bulanan = df_bulanan.to_csv(index=False).encode("utf-8")
-    st.download_button("💾 Download Hasil Peramalan Bulanan", csv_bulanan, "hasil_peramalan_bulanan.csv", "text/csv")
+    st.download_button(
+        "💾 Download Hasil Peramalan Bulanan",
+        csv_bulanan,
+        "hasil_peramalan_bulanan.csv",
+        "text/csv"
+    )
+
 
 
 
