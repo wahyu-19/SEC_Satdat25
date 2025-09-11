@@ -161,12 +161,12 @@ if uploaded_file is not None:
         else:
             total_rr = 0
 
-        if total_rr > 300:   # total bulanan > 300 mm = basah
+        if total_rr > 200:   # total bulanan > 300 mm = basah
             color = "#3498db"  # biru (basah)
-        elif total_rr >= 200:
+        elif total_rr >= 100:
             color = "#2ecc71"  # hijau (lembab)
         else:
-            color = "#e74c3c"  # merah (kering)
+            color = "#f39c12"  # orange (kering)
 
         placeholders_bulan[i].markdown(
             f"<div style='background-color:{color}; "
@@ -191,3 +191,4 @@ if uploaded_file is not None:
         "hasil_peramalan_bulanan.csv",
         "text/csv"
     )
+
