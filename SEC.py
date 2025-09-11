@@ -137,8 +137,8 @@ if uploaded_file is not None:
 
     # ========== HASIL REKOMENDASI ==========
     median_pred = df_bulanan["Prediksi Curah Hujan"].median()
-    hasil_padi = "✅ Cocok untuk tanam Padi 🌾" if median_pred >= 300 else "❌ Tidak disarankan tanam Padi"
-    hasil_palawija = "✅ Cocok untuk tanam Palawija 🌽" if 150 <= median_pred < 300 else "❌ Tidak disarankan tanam Palawija"
+    hasil_padi = "✅ Cocok untuk tanam Padi 🌾" if median_pred >= 200 else "❌ Tidak disarankan tanam Padi"
+    hasil_palawija = "✅ Cocok untuk tanam Palawija 🌽" if 150 <= median_pred < 200 else "❌ Tidak disarankan tanam Palawija"
 
     col3, col4 = st.columns(2)
     with col3:
@@ -194,3 +194,4 @@ if uploaded_file is not None:
         "hasil_peramalan_bulanan.csv",
         "text/csv"
     )
+
