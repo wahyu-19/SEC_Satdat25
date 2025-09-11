@@ -116,10 +116,11 @@ for i, b in enumerate(bulan_labels):
         )
         placeholders_bulan.append(ph)
 
-# ======== Tambahkan jarak dan garis pemisah ========
-st.markdown("<br>", unsafe_allow_html=True)   # 1 baris kosong tipis
-st.markdown("<hr>", unsafe_allow_html=True)   # garis pemisah tipis
-
+# Garis pemisah dengan jarak kecil
+st.markdown(
+    "<hr style='margin:20px 0;'>",  # ubah angka 20px jadi lebih kecil kalau mau lebih rapat
+    unsafe_allow_html=True
+)
 
 # =================== Upload data + luas lahan ===================
 col1, col2 = st.columns([2, 1])
@@ -180,5 +181,6 @@ if uploaded_file is not None:
     # ========== DOWNLOAD ==========
     csv_bulanan = df_bulanan.to_csv(index=False).encode("utf-8")
     st.download_button("💾 Download Hasil Peramalan Bulanan", csv_bulanan, "hasil_peramalan_bulanan.csv", "text/csv")
+
 
 
