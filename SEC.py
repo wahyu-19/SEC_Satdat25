@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
+import matplotlib.pyplot as plt
 
 # ============================================
 # Fungsi peramalan
@@ -73,7 +74,23 @@ def proses_peramalan(file):
         "TANGGAL": future_dates,
         "RR_Prediksi": forecast.flatten()
     })
-    return df, df_forecast
+
+    # ======== Agregasi Bulanan ========
+    df_forecast['Tahun'] = df_forecast['TANGGAL'].dt.year
+    df_forecast['Bulan'] = df_forecast['TANGGAL'].dt.month
+
+    df_bulanan = (
+        df_forecast.groupby(['Tahun', 'Bulan'])['RR_Prediksi']
+        .sum()
+        .reset_index()
+    )
+
+    df_bulanan['Nama_Bulan'] = df_bulanan['Bulan'].map({
+        1: "Jan", 2: "Feb", 3: "Mar", 4: "Apr", 5: "Mei", 6: "Jun",
+        7: "Jul", 8: "Agu", 9: "Sep", 10: "Okt", 11: "Nov", 12: "Des"
+    })
+
+    return df, df_forecast, df_bulanan
 
 # ============================================
 # Layout UI
@@ -110,7 +127,7 @@ with col2:
 
 # =================== Jika ada file ===================
 if uploaded_file is not None:
-    df, df_forecast = proses_peramalan(uploaded_file)
+    df, df_forecast, df_bulanan = proses_peramalan(uploaded_file)
 
     # ========== HASIL REKOMENDASI ==========
     median_pred = df_forecast["RR_Prediksi"].median()
@@ -132,12 +149,15 @@ if uploaded_file is not None:
 
     # ========== UPDATE WARNA BULAN ==========
     for i, b in enumerate(bulan_labels):
-        month_data = df_forecast[df_forecast["TANGGAL"].dt.month == (i + 1)]
-        mean_rr = month_data["RR_Prediksi"].mean()
+        month_data = df_bulanan[df_bulanan["Bulan"] == (i + 1)]
+        if not month_data.empty:
+            total_rr = month_data["RR_Prediksi"].values[0]
+        else:
+            total_rr = 0
 
-        if mean_rr > 200:
+        if total_rr > 200:   # total bulanan > 200 mm
             color = "#3498db"  # biru (basah)
-        elif mean_rr >= 100:
+        elif total_rr >= 100:
             color = "#2ecc71"  # hijau (lembab)
         else:
             color = "#e74c3c"  # merah (kering)
@@ -152,6 +172,22 @@ if uploaded_file is not None:
     st.subheader("📈 Hasil Peramalan 365 Hari (2025)")
     st.dataframe(df_forecast)
 
-    csv = df_forecast.to_csv(index=False).encode("utf-8")
-    st.download_button("💾 Download Hasil Peramalan", csv, "hasil_peramalan.csv", "text/csv")
+    # ========== TABEL BULANAN ==========
+    st.subheader("📊 Akumulasi Curah Hujan Bulanan (2025)")
+    st.dataframe(df_bulanan)
 
+    # ========== GRAFIK BATANG BULANAN ==========
+    st.subheader("📊 Grafik Total Curah Hujan Bulanan")
+    fig, ax = plt.subplots()
+    ax.bar(df_bulanan['Nama_Bulan'], df_bulanan['RR_Prediksi'])
+    ax.set_ylabel("Total Curah Hujan (mm)")
+    ax.set_xlabel("Bulan")
+    ax.set_title("Total Curah Hujan Bulanan (2025)")
+    st.pyplot(fig)
+
+    # ========== DOWNLOAD ==========
+    csv = df_forecast.to_csv(index=False).encode("utf-8")
+    st.download_button("💾 Download Hasil Peramalan Harian", csv, "hasil_peramalan.csv", "text/csv")
+
+    csv_bulanan = df_bulanan.to_csv(index=False).encode("utf-8")
+    st.download_button("💾 Download Hasil Peramalan Bulanan", csv_bulanan, "hasil_peramalan_bulanan.csv", "text/csv")
