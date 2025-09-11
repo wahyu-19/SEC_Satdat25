@@ -163,7 +163,7 @@ if uploaded_file is not None:
 
         if total_rr > 300:   # total bulanan > 300 mm = basah
             color = "#3498db"  # biru (basah)
-        elif total_rr >= 150:
+        elif total_rr >= 200:
             color = "#2ecc71"  # hijau (lembab)
         else:
             color = "#e74c3c"  # merah (kering)
@@ -181,6 +181,7 @@ if uploaded_file is not None:
     # ========== DOWNLOAD ==========
     csv_bulanan = df_bulanan.to_csv(index=False).encode("utf-8")
     st.download_button("💾 Download Hasil Peramalan Bulanan", csv_bulanan, "hasil_peramalan_bulanan.csv", "text/csv")
+
 
 
 
