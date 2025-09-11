@@ -18,17 +18,36 @@ def proses_peramalan(file):
         st.error(f"Gagal membaca file: {e}")
         st.stop()
 
+    # ======== Preprocessing Tanggal ========
     df['TANGGAL'] = pd.to_datetime(df['TANGGAL'], errors='coerce')
     df = df.dropna(subset=['TANGGAL']).sort_values("TANGGAL")
 
-    df_nan = df.dropna(subset=['RR'])
+    # ======== Preprocessing RR ========
+    df_nan = df.copy()
+    # ganti 8888, 9999, "-" jadi NaN
+    df_nan['RR'] = df_nan['RR'].replace([8888, 9999, "-"], np.nan)
+    # pastikan numerik
+    df_nan['RR'] = pd.to_numeric(df_nan['RR'], errors='coerce')
+    # ambil median valid
+    rr_median = df_nan['RR'].median()
+    # isi NaN dengan median
+    df_nan['RR'] = df_nan['RR'].fillna(rr_median)
+
+    # Info preprocessing
+    st.write("📊 Info Preprocessing Data")
+    st.write(f"Median RR: {rr_median}")
+    st.write(f"Min RR setelah imputasi: {df_nan['RR'].min()}")
+    st.write(f"Max RR setelah imputasi: {df_nan['RR'].max()}")
+
+    # ======== Normalisasi untuk LSTM ========
     scaler = MinMaxScaler(feature_range=(0, 1))
     df_nan['RR_norm'] = scaler.fit_transform(df_nan[['RR']])
 
+    # ======== Dataset untuk LSTM ========
     def create_dataset(dataset, look_back=1):
         dataX, dataY = [], []
-        for i in range(len(dataset)-look_back-1):
-            a = dataset[i:(i+look_back), 0]
+        for i in range(len(dataset) - look_back - 1):
+            a = dataset[i:(i + look_back), 0]
             dataX.append(a)
             dataY.append(dataset[i + look_back, 0])
         return np.array(dataX), np.array(dataY)
@@ -38,6 +57,7 @@ def proses_peramalan(file):
     trainX, trainY = create_dataset(dataset, look_back)
     trainX = np.reshape(trainX, (trainX.shape[0], trainX.shape[1], 1))
 
+    # ======== Model LSTM ========
     model = Sequential()
     model.add(LSTM(50, input_shape=(look_back, 1)))
     model.add(Dense(1))
@@ -46,7 +66,7 @@ def proses_peramalan(file):
     with st.spinner("Training model LSTM..."):
         model.fit(trainX, trainY, epochs=50, batch_size=32, verbose=0)
 
-    # ========== FORECAST 365 HARI ==========
+    # ======== Forecast 365 Hari ========
     forecast = []
     last_data = dataset[-look_back:].reshape(1, look_back, 1)
     for _ in range(365):
@@ -57,7 +77,7 @@ def proses_peramalan(file):
 
     forecast = scaler.inverse_transform(np.array(forecast).reshape(-1, 1))
 
-    # ====== SET MULAI TANGGAL 2025 ======
+    # ======== Set tanggal mulai 2025 ========
     start_date = pd.Timestamp(year=2025, month=1, day=1)
     future_dates = pd.date_range(start=start_date, periods=365)
 
@@ -75,7 +95,7 @@ st.set_page_config(page_title="AgroForecast", layout="wide")
 st.markdown("<h1 style='text-align:center;'>🌱 AGROFORECAST</h1>", unsafe_allow_html=True)
 st.markdown("### Kalender Musim Tanam (Basah - Lembab - Kering)")
 
-# =================== Kotak-kotak bulan (pakai placeholder) ===================
+# =================== Kotak-kotak bulan ===================
 bulan_labels = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
                 "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
 
@@ -100,7 +120,7 @@ with col2:
     st.subheader("Luas Lahan")
     luas_lahan = st.number_input("Input luas lahan (Ha)", min_value=0.0, step=0.1)
 
-# =================== Jika ada file: proses forecast dan update warna ===================
+# =================== Jika ada file ===================
 if uploaded_file is not None:
     df, df_forecast = proses_peramalan(uploaded_file)
 
@@ -122,9 +142,9 @@ if uploaded_file is not None:
             unsafe_allow_html=True
         )
 
-    # ========== UPDATE WARNA BULAN BERDASARKAN FORECAST ==========
+    # ========== UPDATE WARNA BULAN ==========
     for i, b in enumerate(bulan_labels):
-        month_data = df_forecast[df_forecast["TANGGAL"].dt.month == (i+1)]
+        month_data = df_forecast[df_forecast["TANGGAL"].dt.month == (i + 1)]
         mean_rr = month_data["RR_Prediksi"].mean()
 
         if mean_rr > 200:
@@ -146,5 +166,3 @@ if uploaded_file is not None:
 
     csv = df_forecast.to_csv(index=False).encode("utf-8")
     st.download_button("💾 Download Hasil Peramalan", csv, "hasil_peramalan.csv", "text/csv")
-
-
