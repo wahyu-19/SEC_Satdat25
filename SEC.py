@@ -4,7 +4,6 @@ import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
-import matplotlib.pyplot as plt
 
 # ============================================
 # Fungsi peramalan
@@ -85,10 +84,11 @@ def proses_peramalan(file):
         .reset_index()
     )
 
-    df_bulanan['Nama_Bulan'] = df_bulanan['Bulan'].map({
-        1: "Jan", 2: "Feb", 3: "Mar", 4: "Apr", 5: "Mei", 6: "Jun",
-        7: "Jul", 8: "Agu", 9: "Sep", 10: "Okt", 11: "Nov", 12: "Des"
-    })
+    # Ganti angka bulan jadi nama bulan
+    df_bulanan['Bulan'] = pd.to_datetime(df_bulanan['Bulan'], format='%m').dt.month_name()
+
+    # Rename kolom prediksi
+    df_bulanan = df_bulanan.rename(columns={"RR_Prediksi": "Prediksi Curah Hujan"})
 
     return df_bulanan
 
@@ -118,7 +118,7 @@ for i, b in enumerate(bulan_labels):
 
 # Garis pemisah dengan jarak kecil
 st.markdown(
-    "<hr style='margin:20px 0;'>",  # ubah angka 20px jadi lebih kecil kalau mau lebih rapat
+    "<hr style='margin:20px 0;'>",
     unsafe_allow_html=True
 )
 
@@ -136,7 +136,7 @@ if uploaded_file is not None:
     df_bulanan = proses_peramalan(uploaded_file)
 
     # ========== HASIL REKOMENDASI ==========
-    median_pred = df_bulanan["RR_Prediksi"].median()
+    median_pred = df_bulanan["Prediksi Curah Hujan"].median()
     hasil_padi = "✅ Cocok untuk tanam Padi 🌾" if median_pred >= 300 else "❌ Tidak disarankan tanam Padi"
     hasil_palawija = "✅ Cocok untuk tanam Palawija 🌽" if 150 <= median_pred < 300 else "❌ Tidak disarankan tanam Palawija"
 
@@ -155,9 +155,9 @@ if uploaded_file is not None:
 
     # ========== UPDATE WARNA BULAN ==========
     for i, b in enumerate(bulan_labels):
-        month_data = df_bulanan[df_bulanan["Bulan"] == (i + 1)]
+        month_data = df_bulanan[df_bulanan["Bulan"].str.startswith(b)]
         if not month_data.empty:
-            total_rr = month_data["RR_Prediksi"].values[0]
+            total_rr = month_data["Prediksi Curah Hujan"].values[0]
         else:
             total_rr = 0
 
@@ -176,19 +176,13 @@ if uploaded_file is not None:
 
     # ========== TABEL FORECAST BULANAN ==========
     st.subheader("📊 Hasil Peramalan Bulanan")
-    
-    # Pastikan Tahun int
-    df_bulanan['Tahun'] = df_bulanan['Tahun'].astype(int)
-    
-    # Ganti angka bulan jadi nama bulan
-    df_bulanan['Bulan'] = pd.to_datetime(df_bulanan['Bulan'], format='%m').dt.month_name()
-    
+
     # Atur urutan kolom: Tahun, Bulan, Prediksi
-    df_bulanan = df_bulanan[['Tahun', 'Bulan', 'Forecast Curah hujan']]
-    
+    df_bulanan = df_bulanan[['Tahun', 'Bulan', 'Prediksi Curah Hujan']]
+
     # Tampilkan tabel
     st.dataframe(df_bulanan)
-    
+
     # Tombol download
     csv_bulanan = df_bulanan.to_csv(index=False).encode("utf-8")
     st.download_button(
@@ -197,8 +191,3 @@ if uploaded_file is not None:
         "hasil_peramalan_bulanan.csv",
         "text/csv"
     )
-
-
-
-
-
