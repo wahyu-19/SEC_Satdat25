@@ -1,18 +1,9 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import random
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
-import tensorflow as tf
-
-# ============================================
-# Set seed biar hasil konsisten
-# ============================================
-np.random.seed(42)
-tf.random.set_seed(42)
-random.seed(42)
 
 # ============================================
 # Fungsi peramalan
@@ -220,3 +211,4 @@ if uploaded_file is not None:
         "hasil_peramalan_bulanan.csv",
         "text/csv"
     )
+
