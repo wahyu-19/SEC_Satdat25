@@ -90,7 +90,11 @@ def proses_peramalan(file):
     # Rename kolom prediksi
     df_bulanan = df_bulanan.rename(columns={"RR_Prediksi": "Prediksi Curah Hujan"})
 
+    # Pastikan Tahun tidak ada koma ribuan
+    df_bulanan["Tahun"] = df_bulanan["Tahun"].astype(str)
+
     return df_bulanan
+
 
 # ============================================
 # Layout UI
@@ -135,56 +139,83 @@ with col2:
 if uploaded_file is not None:
     df_bulanan = proses_peramalan(uploaded_file)
 
-    # ========== HASIL REKOMENDASI ==========
-    median_pred = df_bulanan["Prediksi Curah Hujan"].median()
-    hasil_padi = "✅ Cocok untuk tanam Padi 🌾" if median_pred >= 200 else "❌ Tidak disarankan tanam Padi"
-    hasil_palawija = "✅ Cocok untuk tanam Palawija 🌽" if 150 <= median_pred < 200 else "❌ Tidak disarankan tanam Palawija"
-
-    col3, col4 = st.columns(2)
-    with col3:
-        st.success(hasil_padi)
-    with col4:
-        st.info(hasil_palawija)
-
-    if luas_lahan > 0:
-        rekomendasi = int(luas_lahan * median_pred / 100)
-        st.markdown(
-            f"<h3 style='text-align:center;'>Rekomendasi subsidi bibit : {rekomendasi} ton 🌱</h3>",
-            unsafe_allow_html=True
-        )
-
-    # ========== UPDATE WARNA BULAN ==========
-    for i, b in enumerate(bulan_labels):
-        month_data = df_bulanan[
-            (df_bulanan["Tahun"] == 2025) &
-            (df_bulanan["Bulan_Angka"] == (i + 1))
-        ]
-        if not month_data.empty:
-            total_rr = month_data["Prediksi Curah Hujan"].values[0]
+    # ========== Tambah klasifikasi bulanan ==========
+    def klasifikasi_bulanan(rr):
+        if rr > 200:
+            return "Bulan Basah"
+        elif rr >= 100:
+            return "Bulan Lembab"
         else:
-            total_rr = 0
+            return "Bulan Kering"
 
-        if total_rr > 200:
-            color = "#3498db"  # biru (basah)
-        elif total_rr >= 100:
-            color = "#2ecc71"  # hijau (lembab)
+    df_bulanan["Klasifikasi"] = df_bulanan["Prediksi Curah Hujan"].apply(klasifikasi_bulanan)
+
+    # ========== Fungsi klasifikasi tahunan ==========
+    def klasifikasi_tahunan(group):
+        bulan_basah = (group["Klasifikasi"] == "Bulan Basah").sum()
+        bulan_kering = (group["Klasifikasi"] == "Bulan Kering").sum()
+
+        # huruf
+        if bulan_basah > 9:
+            huruf = "A"
+        elif 7 <= bulan_basah <= 9:
+            huruf = "B"
+        elif 5 <= bulan_basah <= 6:
+            huruf = "C"
+        elif 3 <= bulan_basah <= 4:
+            huruf = "D"
         else:
-            color = "#f39c12"  # orange (kering)
+            huruf = "E"
 
-        placeholders_bulan[i].markdown(
-            f"<div style='background-color:{color}; padding:10px; border-radius:8px; "
-            f"text-align:center; color:white;'>{b}</div>",
-            unsafe_allow_html=True
-        )
+        # angka
+        if bulan_kering < 2:
+            angka = "1"
+        elif 2 <= bulan_kering <= 3:
+            angka = "2"
+        elif 4 <= bulan_kering <= 6:
+            angka = "3"
+        elif 7 <= bulan_kering <= 9:
+            angka = "4"
+        else:
+            angka = "5"
 
-    # ========== TABEL FORECAST BULANAN ==========
+        tipe = f"{huruf}{angka}"
+
+        # mapping rekomendasi
+        rekom_dict = {
+            "A1": "Sesuai untuk padi terus menerus tetapi produksi kurang karena radiasi surya rendah sepanjang tahun",
+            "A2": "Sesuai untuk padi terus menerus tetapi produksi kurang karena radiasi surya rendah sepanjang tahun",
+            "B1": "Sesuai untuk padi terus menerus dengan perencanaan awal musim tanam yang baik; produksi tinggi bila panen musim kemarau",
+            "B2": "Sesuai untuk tanam padi dua kali setahun dengan varietas umur pendek dan musim kering pendek cukup untuk palawija",
+            "B3": "Sesuai untuk tanam padi dua kali setahun dengan varietas umur pendek dan musim kering pendek cukup untuk palawija",
+            "C1": "Sesuai untuk tanam padi sekali dan dua kali palawija dalam setahun",
+            "C2": "Sesuai untuk tanam padi sekali dan dua kali palawija; palawija kedua tidak boleh musim kering",
+            "C3": "Sesuai untuk tanam padi sekali dan dua kali palawija; palawija kedua tidak boleh musim kering",
+            "C4": "Sesuai untuk tanam padi sekali dan dua kali palawija; palawija kedua tidak boleh musim kering",
+            "D1": "Sesuai untuk tanam padi umur pendek sekali dengan produksi tinggi + sekali palawija",
+            "D2": "Sesuai untuk sekali tanam padi atau sekali palawija, tergantung irigasi",
+            "D3": "Sesuai untuk sekali tanam padi atau sekali palawija, tergantung irigasi",
+            "D4": "Sesuai untuk sekali tanam padi atau sekali palawija, tergantung irigasi",
+            "E1": "Sesuai untuk sekali tanam palawija, tergantung adanya hujan",
+            "E2": "Sesuai untuk sekali tanam palawija, tergantung adanya hujan",
+            "E3": "Sesuai untuk sekali tanam palawija, tergantung adanya hujan",
+            "E4": "Sesuai untuk sekali tanam palawija, tergantung adanya hujan",
+            "E5": "Sesuai untuk sekali tanam palawija, tergantung adanya hujan",
+        }
+
+        rekom = rekom_dict.get(tipe, "Tidak ada rekomendasi")
+
+        return pd.Series({"Tipe_Iklim": tipe, "Rekomendasi": rekom})
+
+    # Terapkan per tahun
+    hasil_klasifikasi = df_bulanan.groupby("Tahun").apply(klasifikasi_tahunan).reset_index()
+
+    # ========== Tampilkan hasil ==========
     st.subheader("📊 Hasil Peramalan Bulanan")
+    st.dataframe(df_bulanan[["Tahun", "Bulan", "Prediksi Curah Hujan", "Klasifikasi"]])
 
-    # Atur urutan kolom: Tahun, Bulan, Prediksi
-    df_bulanan = df_bulanan[['Tahun', 'Bulan', 'Prediksi Curah Hujan']]
-
-    # Tampilkan tabel
-    st.dataframe(df_bulanan)
+    st.subheader("🌦️ Klasifikasi Tahunan (Tipe Iklim Oldeman)")
+    st.dataframe(hasil_klasifikasi)
 
     # Tombol download
     csv_bulanan = df_bulanan.to_csv(index=False).encode("utf-8")
@@ -192,6 +223,14 @@ if uploaded_file is not None:
         "💾 Download Hasil Peramalan Bulanan",
         csv_bulanan,
         "hasil_peramalan_bulanan.csv",
+        "text/csv"
+    )
+
+    csv_tahunan = hasil_klasifikasi.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        "💾 Download Klasifikasi Tahunan",
+        csv_tahunan,
+        "hasil_klasifikasi_tahunan.csv",
         "text/csv"
     )
 
