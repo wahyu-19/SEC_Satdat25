@@ -5,232 +5,107 @@ from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
 
-# ============================================
-# Fungsi peramalan
-# ============================================
+# ===========================
+# Judul Aplikasi
+# ===========================
+st.set_page_config(page_title="AgroForecast", layout="wide")
+st.markdown("<h1 style='text-align: center;'>🌱 AGROFORECAST</h1>", unsafe_allow_html=True)
+st.write("Kalender Musim Tanam (Basah - Lembab - Kering)")
+
+# ===========================
+# Upload Data
+# ===========================
+uploaded_file = st.file_uploader("Upload File CSV", type=["csv"])
+luas_lahan = st.number_input("Input luas lahan (Ha)", min_value=0.1, value=10.0, step=0.1)
+
+# ===========================
+# Fungsi Peramalan LSTM
+# ===========================
 def proses_peramalan(file):
-    try:
-        df = pd.read_csv(file)  # <-- pakai CSV
-        if not set(["TANGGAL", "RR"]).issubset(df.columns):
-            st.error("File CSV harus ada kolom 'TANGGAL' dan 'RR'")
-            st.stop()
-    except Exception as e:
-        st.error(f"Gagal membaca file: {e}")
-        st.stop()
+    df = pd.read_csv(file)
+    if not set(["TANGGAL", "RR"]).issubset(df.columns):
+        st.error("CSV harus memiliki kolom 'TANGGAL' dan 'RR'")
+        return None
 
-    # ======== Preprocessing Tanggal ========
-    df['TANGGAL'] = pd.to_datetime(df['TANGGAL'], errors='coerce')
-    df = df.dropna(subset=['TANGGAL']).sort_values("TANGGAL")
+    # Convert tanggal
+    df["TANGGAL"] = pd.to_datetime(df["TANGGAL"])
+    df = df.set_index("TANGGAL")
 
-    # ======== Preprocessing RR ========
-    df['RR'] = df['RR'].replace([8888, 9999, "-"], np.nan)
-    df['RR'] = pd.to_numeric(df['RR'], errors='coerce')
-    df['RR'] = df['RR'].fillna(df['RR'].median())
-
-    # ======== Normalisasi untuk LSTM ========
+    # Normalisasi
+    data = df["RR"].values.reshape(-1, 1)
     scaler = MinMaxScaler(feature_range=(0, 1))
-    df['RR_norm'] = scaler.fit_transform(df[['RR']])
+    data_scaled = scaler.fit_transform(data)
 
-    # ======== Dataset untuk LSTM ========
-    def create_dataset(dataset, look_back=1):
-        dataX, dataY = [], []
-        for i in range(len(dataset) - look_back - 1):
-            a = dataset[i:(i + look_back), 0]
-            dataX.append(a)
-            dataY.append(dataset[i + look_back, 0])
-        return np.array(dataX), np.array(dataY)
+    # Buat dataset untuk LSTM
+    def create_dataset(dataset, look_back=12):
+        X, Y = [], []
+        for i in range(len(dataset)-look_back-1):
+            X.append(dataset[i:(i+look_back), 0])
+            Y.append(dataset[i+look_back, 0])
+        return np.array(X), np.array(Y)
 
-    dataset = df['RR_norm'].values.reshape(-1, 1)
-    look_back = 30
-    trainX, trainY = create_dataset(dataset, look_back)
-    trainX = np.reshape(trainX, (trainX.shape[0], trainX.shape[1], 1))
+    look_back = 12
+    X, y = create_dataset(data_scaled, look_back)
+    X = np.reshape(X, (X.shape[0], X.shape[1], 1))
 
-    # ======== Model LSTM ========
+    # Model LSTM
     model = Sequential()
-    model.add(LSTM(50, input_shape=(look_back, 1)))
+    model.add(LSTM(50, return_sequences=True, input_shape=(look_back, 1)))
+    model.add(LSTM(50))
     model.add(Dense(1))
-    model.compile(loss='mean_squared_error', optimizer='adam')
+    model.compile(loss="mean_squared_error", optimizer="adam")
+    model.fit(X, y, epochs=10, batch_size=1, verbose=0)
 
-    with st.spinner("Training model LSTM..."):
-        model.fit(trainX, trainY, epochs=50, batch_size=32, verbose=0)
+    # Prediksi 12 bulan ke depan
+    last_data = data_scaled[-look_back:]
+    predictions = []
+    input_seq = last_data.reshape(1, look_back, 1)
+    for i in range(12):
+        pred = model.predict(input_seq, verbose=0)
+        predictions.append(pred[0][0])
+        input_seq = np.append(input_seq[:,1:,:], [[pred]], axis=1)
 
-    # ======== Forecast 365 Hari ========
-    forecast = []
-    last_data = dataset[-look_back:].reshape(1, look_back, 1)
-    for _ in range(365):
-        next_pred = model.predict(last_data, verbose=0)
-        forecast.append(next_pred[0][0])
-        next_pred = next_pred.reshape(1, 1, 1)
-        last_data = np.concatenate((last_data[:, 1:, :], next_pred), axis=1)
+    forecast = scaler.inverse_transform(np.array(predictions).reshape(-1,1))
 
-    forecast = scaler.inverse_transform(np.array(forecast).reshape(-1, 1))
-
-    # ======== Set tanggal mulai 2025 ========
-    start_date = pd.Timestamp(year=2025, month=1, day=1)
-    future_dates = pd.date_range(start=start_date, periods=365)
-
-    df_forecast = pd.DataFrame({
-        "TANGGAL": future_dates,
-        "RR_Prediksi": forecast.flatten()
+    # Dataframe hasil prediksi
+    bulan_list = ["January","February","March","April","May","June",
+                  "July","August","September","October","November","December"]
+    tahun_pred = 2025
+    df_pred = pd.DataFrame({
+        "Tahun": [tahun_pred]*12,
+        "Bulan": bulan_list,
+        "Prediksi Curah Hujan": forecast.flatten()
     })
 
-    # ======== Agregasi Bulanan ========
-    df_forecast['Tahun'] = df_forecast['TANGGAL'].dt.year
-    df_forecast['Bulan_Angka'] = df_forecast['TANGGAL'].dt.month
+    return df_pred
 
-    df_bulanan = (
-        df_forecast.groupby(['Tahun', 'Bulan_Angka'])['RR_Prediksi']
-        .sum()
-        .reset_index()
-    )
-
-    # Ganti angka bulan jadi nama bulan
-    df_bulanan['Bulan'] = pd.to_datetime(df_bulanan['Bulan_Angka'], format='%m').dt.month_name()
-
-    # Rename kolom prediksi
-    df_bulanan = df_bulanan.rename(columns={"RR_Prediksi": "Prediksi Curah Hujan"})
-
-    # Pastikan Tahun tidak ada koma ribuan
-    df_bulanan["Tahun"] = df_bulanan["Tahun"].astype(str)
-
-    return df_bulanan
-
-
-# ============================================
-# Layout UI
-# ============================================
-st.set_page_config(page_title="AgroForecast", layout="wide")
-
-st.markdown("<h1 style='text-align:center;'>🌱 AGROFORECAST</h1>", unsafe_allow_html=True)
-st.markdown("### Kalender Musim Tanam (Basah - Lembab - Kering)")
-
-# =================== Kotak-kotak bulan ===================
-bulan_labels = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
-                "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
-
-cols_bulan = st.columns(12)
-placeholders_bulan = []
-for i, b in enumerate(bulan_labels):
-    with cols_bulan[i]:
-        ph = st.empty()
-        ph.markdown(
-            f"<div style='background-color:#95a5a6; "
-            f"padding:10px; border-radius:8px; text-align:center; color:white;'>{b}</div>",
-            unsafe_allow_html=True
-        )
-        placeholders_bulan.append(ph)
-
-# Garis pemisah dengan jarak kecil
-st.markdown(
-    "<hr style='margin:20px 0;'>",
-    unsafe_allow_html=True
-)
-
-# =================== Upload data + luas lahan ===================
-col1, col2 = st.columns([2, 1])
-with col1:
-    st.subheader("Data Curah Hujan")
-    uploaded_file = st.file_uploader("Upload File CSV", type=["csv"])
-with col2:
-    st.subheader("Luas Lahan")
-    luas_lahan = st.number_input("Input luas lahan (Ha)", min_value=0.0, step=0.1)
-
-# =================== Jika ada file ===================
+# ===========================
+# Jalankan Forecast
+# ===========================
 if uploaded_file is not None:
     df_bulanan = proses_peramalan(uploaded_file)
 
-    # ========== Tambah klasifikasi bulanan ==========
-    def klasifikasi_bulanan(rr):
-        if rr > 200:
-            return "Bulan Basah"
-        elif rr >= 100:
-            return "Bulan Lembab"
+    if df_bulanan is not None:
+        st.subheader("📊 Hasil Peramalan Bulanan")
+        st.dataframe(df_bulanan.head(10))  # tampilkan 10 bulan pertama
+
+        # ===========================
+        # Rekomendasi dalam kalimat
+        # ===========================
+        rata_hujan = df_bulanan["Prediksi Curah Hujan"].mean()
+
+        if rata_hujan > 300:
+            st.success(f"✅ Cocok untuk tanam **Padi** 🌾\n\nRekomendasi subsidi bibit: **{int(luas_lahan*3.2)} ton**")
+        elif 200 <= rata_hujan <= 300:
+            st.warning(f"⚠️ Cocok untuk tanam **Palawija** 🌽\n\nRekomendasi subsidi bibit: **{int(luas_lahan*2)} ton**")
         else:
-            return "Bulan Kering"
+            st.error("❌ Tidak disarankan menanam saat ini 🚫")
 
-    df_bulanan["Klasifikasi"] = df_bulanan["Prediksi Curah Hujan"].apply(klasifikasi_bulanan)
-
-    # ========== Fungsi klasifikasi tahunan ==========
-    def klasifikasi_tahunan(group):
-        bulan_basah = (group["Klasifikasi"] == "Bulan Basah").sum()
-        bulan_kering = (group["Klasifikasi"] == "Bulan Kering").sum()
-
-        # huruf
-        if bulan_basah > 9:
-            huruf = "A"
-        elif 7 <= bulan_basah <= 9:
-            huruf = "B"
-        elif 5 <= bulan_basah <= 6:
-            huruf = "C"
-        elif 3 <= bulan_basah <= 4:
-            huruf = "D"
-        else:
-            huruf = "E"
-
-        # angka
-        if bulan_kering < 2:
-            angka = "1"
-        elif 2 <= bulan_kering <= 3:
-            angka = "2"
-        elif 4 <= bulan_kering <= 6:
-            angka = "3"
-        elif 7 <= bulan_kering <= 9:
-            angka = "4"
-        else:
-            angka = "5"
-
-        tipe = f"{huruf}{angka}"
-
-        # mapping rekomendasi
-        rekom_dict = {
-            "A1": "Sesuai untuk padi terus menerus tetapi produksi kurang karena radiasi surya rendah sepanjang tahun",
-            "A2": "Sesuai untuk padi terus menerus tetapi produksi kurang karena radiasi surya rendah sepanjang tahun",
-            "B1": "Sesuai untuk padi terus menerus dengan perencanaan awal musim tanam yang baik; produksi tinggi bila panen musim kemarau",
-            "B2": "Sesuai untuk tanam padi dua kali setahun dengan varietas umur pendek dan musim kering pendek cukup untuk palawija",
-            "B3": "Sesuai untuk tanam padi dua kali setahun dengan varietas umur pendek dan musim kering pendek cukup untuk palawija",
-            "C1": "Sesuai untuk tanam padi sekali dan dua kali palawija dalam setahun",
-            "C2": "Sesuai untuk tanam padi sekali dan dua kali palawija; palawija kedua tidak boleh musim kering",
-            "C3": "Sesuai untuk tanam padi sekali dan dua kali palawija; palawija kedua tidak boleh musim kering",
-            "C4": "Sesuai untuk tanam padi sekali dan dua kali palawija; palawija kedua tidak boleh musim kering",
-            "D1": "Sesuai untuk tanam padi umur pendek sekali dengan produksi tinggi + sekali palawija",
-            "D2": "Sesuai untuk sekali tanam padi atau sekali palawija, tergantung irigasi",
-            "D3": "Sesuai untuk sekali tanam padi atau sekali palawija, tergantung irigasi",
-            "D4": "Sesuai untuk sekali tanam padi atau sekali palawija, tergantung irigasi",
-            "E1": "Sesuai untuk sekali tanam palawija, tergantung adanya hujan",
-            "E2": "Sesuai untuk sekali tanam palawija, tergantung adanya hujan",
-            "E3": "Sesuai untuk sekali tanam palawija, tergantung adanya hujan",
-            "E4": "Sesuai untuk sekali tanam palawija, tergantung adanya hujan",
-            "E5": "Sesuai untuk sekali tanam palawija, tergantung adanya hujan",
-        }
-
-        rekom = rekom_dict.get(tipe, "Tidak ada rekomendasi")
-
-        return pd.Series({"Tipe_Iklim": tipe, "Rekomendasi": rekom})
-
-    # Terapkan per tahun
-    hasil_klasifikasi = df_bulanan.groupby("Tahun").apply(klasifikasi_tahunan).reset_index()
-
-    # ========== Tampilkan hasil ==========
-    st.subheader("📊 Hasil Peramalan Bulanan")
-    st.dataframe(df_bulanan[["Tahun", "Bulan", "Prediksi Curah Hujan", "Klasifikasi"]])
-
-    st.subheader("🌦️ Klasifikasi Tahunan (Tipe Iklim Oldeman)")
-    st.dataframe(hasil_klasifikasi)
-
-    # Tombol download
-    csv_bulanan = df_bulanan.to_csv(index=False).encode("utf-8")
-    st.download_button(
-        "💾 Download Hasil Peramalan Bulanan",
-        csv_bulanan,
-        "hasil_peramalan_bulanan.csv",
-        "text/csv"
-    )
-
-    csv_tahunan = hasil_klasifikasi.to_csv(index=False).encode("utf-8")
-    st.download_button(
-        "💾 Download Klasifikasi Tahunan",
-        csv_tahunan,
-        "hasil_klasifikasi_tahunan.csv",
-        "text/csv"
-    )
-
+        # Tombol download hasil
+        csv = df_bulanan.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 Download Hasil Peramalan Bulanan",
+            data=csv,
+            file_name="hasil_peramalan.csv",
+            mime="text/csv"
+        )
