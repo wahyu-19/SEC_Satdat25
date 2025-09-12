@@ -1,16 +1,25 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import random
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
+import tensorflow as tf
+
+# ============================================
+# Set seed biar hasil konsisten
+# ============================================
+np.random.seed(42)
+tf.random.set_seed(42)
+random.seed(42)
 
 # ============================================
 # Fungsi peramalan
 # ============================================
 def proses_peramalan(file):
     try:
-        df = pd.read_csv(file)  # <-- pakai CSV
+        df = pd.read_csv(file)
         if not set(["TANGGAL", "RR"]).issubset(df.columns):
             st.error("File CSV harus ada kolom 'TANGGAL' dan 'RR'")
             st.stop()
@@ -41,7 +50,7 @@ def proses_peramalan(file):
         return np.array(dataX), np.array(dataY)
 
     dataset = df['RR_norm'].values.reshape(-1, 1)
-    look_back = 30
+    look_back = 30  # samakan dengan yang di Colab
     trainX, trainY = create_dataset(dataset, look_back)
     trainX = np.reshape(trainX, (trainX.shape[0], trainX.shape[1], 1))
 
@@ -52,7 +61,8 @@ def proses_peramalan(file):
     model.compile(loss='mean_squared_error', optimizer='adam')
 
     with st.spinner("Training model LSTM..."):
-        model.fit(trainX, trainY, epochs=50, batch_size=32, verbose=0)
+        # samakan epochs dengan Colab
+        model.fit(trainX, trainY, epochs=200, batch_size=32, verbose=0)
 
     # ======== Forecast 365 Hari ========
     forecast = []
@@ -84,16 +94,12 @@ def proses_peramalan(file):
         .reset_index()
     )
 
-    # Ganti angka bulan jadi nama bulan
     df_bulanan['Bulan'] = pd.to_datetime(df_bulanan['Bulan_Angka'], format='%m').dt.month_name()
-
-    # Rename kolom prediksi
     df_bulanan = df_bulanan.rename(columns={"RR_Prediksi": "Prediksi Curah Hujan"})
-
-    # Pastikan Tahun tidak ada koma ribuan
     df_bulanan["Tahun"] = df_bulanan["Tahun"].astype(str)
 
     return df_bulanan
+
 
 # ============================================
 # Layout UI
@@ -103,7 +109,6 @@ st.set_page_config(page_title="AgroForecast", layout="wide")
 st.markdown("<h1 style='text-align:center;'>🌱 AGROFORECAST</h1>", unsafe_allow_html=True)
 st.markdown("### Kalender Musim Tanam (Basah - Lembab - Kering)")
 
-# =================== Kotak-kotak bulan ===================
 bulan_labels = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
                 "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
 
@@ -121,7 +126,6 @@ for i, b in enumerate(bulan_labels):
 
 st.markdown("<hr style='margin:20px 0;'>", unsafe_allow_html=True)
 
-# =================== Upload data + luas lahan ===================
 col1, col2 = st.columns([2, 1])
 with col1:
     st.subheader("Data Curah Hujan")
@@ -130,7 +134,6 @@ with col2:
     st.subheader("Luas Lahan")
     luas_lahan = st.number_input("Input luas lahan (Ha)", min_value=0.0, step=0.1)
 
-# =================== Jika ada file ===================
 if uploaded_file is not None:
     df_bulanan = proses_peramalan(uploaded_file)
 
@@ -141,13 +144,12 @@ if uploaded_file is not None:
         elif rr >= 100:
             return "Bulan Lembab", "#2ecc71"  # hijau
         else:
-            return "Bulan Kering", "#e67e22"  # oranye
+            return "Bulan Kering", "#e67e22"  # orange
 
     df_bulanan[["Klasifikasi", "Warna"]] = df_bulanan["Prediksi Curah Hujan"].apply(
         lambda x: pd.Series(klasifikasi_bulanan(x))
     )
 
-    # Update warna kalender sesuai forecast 2025
     for i in range(12):
         month_data = df_bulanan[(df_bulanan["Tahun"] == "2025") & (df_bulanan["Bulan_Angka"] == (i + 1))]
         if not month_data.empty:
@@ -164,33 +166,20 @@ if uploaded_file is not None:
         bulan_basah = (group["Klasifikasi"] == "Bulan Basah").sum()
         bulan_kering = (group["Klasifikasi"] == "Bulan Kering").sum()
 
-        # huruf
-        if bulan_basah > 9:
-            huruf = "A"
-        elif 7 <= bulan_basah <= 9:
-            huruf = "B"
-        elif 5 <= bulan_basah <= 6:
-            huruf = "C"
-        elif 3 <= bulan_basah <= 4:
-            huruf = "D"
-        else:
-            huruf = "E"
+        if bulan_basah > 9: huruf = "A"
+        elif 7 <= bulan_basah <= 9: huruf = "B"
+        elif 5 <= bulan_basah <= 6: huruf = "C"
+        elif 3 <= bulan_basah <= 4: huruf = "D"
+        else: huruf = "E"
 
-        # angka
-        if bulan_kering < 2:
-            angka = "1"
-        elif 2 <= bulan_kering <= 3:
-            angka = "2"
-        elif 4 <= bulan_kering <= 6:
-            angka = "3"
-        elif 7 <= bulan_kering <= 9:
-            angka = "4"
-        else:
-            angka = "5"
+        if bulan_kering < 2: angka = "1"
+        elif 2 <= bulan_kering <= 3: angka = "2"
+        elif 4 <= bulan_kering <= 6: angka = "3"
+        elif 7 <= bulan_kering <= 9: angka = "4"
+        else: angka = "5"
 
         tipe = f"{huruf}{angka}"
 
-        # mapping rekomendasi
         rekom_dict = {
             "A1": "Sesuai untuk padi terus menerus tetapi produksi kurang karena radiasi surya rendah sepanjang tahun",
             "A2": "Sesuai untuk padi terus menerus tetapi produksi kurang karena radiasi surya rendah sepanjang tahun",
@@ -215,23 +204,15 @@ if uploaded_file is not None:
         rekom = rekom_dict.get(tipe, "Tidak ada rekomendasi")
         return pd.Series({"Tipe_Iklim": tipe, "Rekomendasi": rekom})
 
-    # Terapkan per tahun
     hasil_klasifikasi = df_bulanan.groupby("Tahun").apply(klasifikasi_tahunan).reset_index()
 
-    # ========== Tampilkan hasil ==========
     st.subheader("📊 Hasil Peramalan Bulanan")
     st.dataframe(df_bulanan[["Tahun", "Bulan", "Prediksi Curah Hujan", "Klasifikasi"]])
 
-    st.subheader("🌦️ Rekomendasi Tanam")
+    st.subheader("🌦️ Rekomendasi Tanaman")
     for _, row in hasil_klasifikasi.iterrows():
-        st.markdown(
-            f"<p style='background-color:#ecf0f1; padding:10px; border-radius:8px;'>"
-            f"➡️ Tahun <b>{row['Tahun']}</b> termasuk tipe iklim <b>{row['Tipe_Iklim']}</b>. "
-            f"Rekomendasi: <i>{row['Rekomendasi']}</i></p>",
-            unsafe_allow_html=True
-        )
+        st.markdown(f"**Tahun {row['Tahun']} → {row['Tipe_Iklim']}** : {row['Rekomendasi']}")
 
-    # Tombol download hanya untuk hasil peramalan bulanan
     csv_bulanan = df_bulanan.to_csv(index=False).encode("utf-8")
     st.download_button(
         "💾 Download Hasil Peramalan Bulanan",
@@ -239,4 +220,3 @@ if uploaded_file is not None:
         "hasil_peramalan_bulanan.csv",
         "text/csv"
     )
-
