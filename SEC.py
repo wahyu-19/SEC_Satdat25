@@ -137,11 +137,11 @@ if uploaded_file is not None:
     # ========== Tambah klasifikasi bulanan ==========
     def klasifikasi_bulanan(rr):
         if rr > 200:
-            return "Bulan Basah", "#27ae60"  # hijau
+            return "Bulan Basah", "#3498db"  # biru
         elif rr >= 100:
-            return "Bulan Lembab", "#f1c40f"  # kuning
+            return "Bulan Lembab", "#2ecc71"  # hijau
         else:
-            return "Bulan Kering", "#e74c3c"  # merah
+            return "Bulan Kering", "#e67e22"  # oranye
 
     df_bulanan[["Klasifikasi", "Warna"]] = df_bulanan["Prediksi Curah Hujan"].apply(
         lambda x: pd.Series(klasifikasi_bulanan(x))
@@ -239,3 +239,4 @@ if uploaded_file is not None:
         "hasil_peramalan_bulanan.csv",
         "text/csv"
     )
+
